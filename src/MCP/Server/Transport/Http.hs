@@ -70,22 +70,23 @@ mcpApplication config serverInfo handlers req respond = do
 -- | Handle MCP requests according to Streamable HTTP specification
 handleMcpRequest :: HttpConfig -> McpServerInfo -> McpServerHandlers IO -> Wai.Request -> (Wai.Response -> IO Wai.ResponseReceived) -> IO Wai.ResponseReceived
 handleMcpRequest config serverInfo handlers req respond = do
-  -- Check for mandatory MCP-Protocol-Version header (2025-06-18 requirement)
-  case lookup "MCP-Protocol-Version" (Wai.requestHeaders req) of
-    Nothing -> do
-      logVerbose config "Request rejected: Missing MCP-Protocol-Version header"
-      respond $ Wai.responseLBS
-        status400
-        [("Content-Type", "application/json")]
-        (encode $ object ["error" .= ("Missing required MCP-Protocol-Version header" :: Text)])
-    Just headerValue ->
-      if TE.decodeUtf8 headerValue /= "2025-06-18" then do
-        logVerbose config $ "Request rejected: Invalid protocol version: " ++ show headerValue
-        respond $ Wai.responseLBS
-          status400
-          [("Content-Type", "application/json")]
-          (encode $ object ["error" .= ("Unsupported protocol version. Server only supports 2025-06-18" :: Text)])
-      else
+  -- Commenting out MCP-Protocol-Version header check... is this causing issues with 5ire?
+  -- -- Check for mandatory MCP-Protocol-Version header (2025-06-18 requirement)
+  -- case lookup "MCP-Protocol-Version" (Wai.requestHeaders req) of
+  --   Nothing -> do
+  --     logVerbose config "Request rejected: Missing MCP-Protocol-Version header"
+  --     respond $ Wai.responseLBS
+  --       status400
+  --       [("Content-Type", "application/json")]
+  --       (encode $ object ["error" .= ("Missing required MCP-Protocol-Version header" :: Text)])
+  --   Just headerValue ->
+  --     if TE.decodeUtf8 headerValue /= "2025-06-18" then do
+  --       logVerbose config $ "Request rejected: Invalid protocol version: " ++ show headerValue
+  --       respond $ Wai.responseLBS
+  --         status400
+  --         [("Content-Type", "application/json")]
+  --         (encode $ object ["error" .= ("Unsupported protocol version. Server only supports 2025-06-18" :: Text)])
+  --     else
         case Wai.requestMethod req of
           -- GET requests for endpoint discovery
           "GET" -> do
