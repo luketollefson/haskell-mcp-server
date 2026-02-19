@@ -8,7 +8,7 @@ module MCP.Server.Types
   , ContentResourceData(..)
   , ResourceContent(..)
 
-    -- * URI Utilities  
+    -- * URI Utilities
   , parseURI
   , URI
 
@@ -54,7 +54,7 @@ import           Data.Maybe       (catMaybes)
 import           Data.Text        (Text)
 import qualified Data.Text        as T
 import           GHC.Generics     (Generic)
-import           Network.URI      (URI, parseURI)
+import           Network.URI      (URI, uriToString, parseURI)
 
 type PromptName = Text
 type ToolName = Text
@@ -67,6 +67,15 @@ data Content
   | ContentImage ContentImageData
   | ContentResource ContentResourceData
   deriving (Show, Eq, Generic)
+
+-- Provide URI encoding/decoding for old versions of Aeson
+toJSONUri :: URI -> Value
+toJSONUri uri = toJSON (uriToString id uri "")
+
+fromJsonUri :: Text -> Parser URI
+fromJsonUri t = case parseURI (T.unpack t) of
+    Nothing -> fail "Invalid URI"
+    Just x  -> return x
 
 instance ToJSON Content where
   toJSON (ContentText text) = object
@@ -81,7 +90,7 @@ instance ToJSON Content where
   toJSON (ContentResource res) = object
     [ "type" .= ("resource" :: Text)
     , "resource" .= object
-        [ "uri" .= contentResourceUri res
+        [ "uri" .= toJSONUri (contentResourceUri res)
         , "mimeType" .= contentResourceMimeType res
         ]
     ]
@@ -97,7 +106,7 @@ instance FromJSON Content where
         return $ ContentImage $ ContentImageData imgData mimeType
       "resource" -> do
         res <- o .: "resource"
-        uri <- res .: "uri"
+        uri <- fromJsonUri =<< res .: "uri"
         mimeType <- res .:? "mimeType"
         return $ ContentResource $ ContentResourceData uri mimeType
       _ -> fail $ "Unknown content type: " ++ T.unpack contentType
